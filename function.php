@@ -1,100 +1,34 @@
 <?php
 
-// データベース接続
-function dbConnect() {
-    $dsn = 'mysql:host=localhost;dbname=todo_app;charset=utf8';
-    $user = 'post_user';
-    $pass = 'post_user';
-    
-    try {
-        $dbh = new PDO($dsn,$user,$pass,[
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
-    } catch(PDOException $e) {
-        echo '接続失敗'. $e->getMessage();
-        exit();
-    };
+require_once('db-function.php');
 
-    return $dbh;
-}
-
-// データを取得する
-function getAllData() {
-    $dbh = dbConnect();
-    // SQLの準備
-    $sql = 'SELECT * FROM posts';
-    // SQLの実行
-    $stmt = $dbh->query($sql);
-    // 結果を取得
-    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    return $result;
-    $dbh = null;
-}
-
-// IDからレコードを取得する
-function getData($id) {
-    if(empty($id)) {
-        exit('元のページに戻ってください。');
+function boxData($id, $where) {
+    switch ($where) {
+        case "create":
+            $placeholderTitle ="例)掃除";
+            $placeholderContent ="例)トイレと風呂場を掃除する";
+            $title = "";
+            $content = "";
+            $dealingProcess = "create";
+            $id = "";
+            $formText = "投稿する";
+            break;
+        case "edit":
+            if (checkIdExistence($id) == "match") {
+                $result = dbGetData($id);
+                $placeholderTitle ="";
+                $placeholderContent ="";
+                $title = $result['title'];
+                $content = $result['content'];
+                $dealingProcess = "edit";
+                $formText = "更新する";
+            } else {
+                exit('存在しないIDです');
+            }
+            break;
     }
 
-    $dbh = dbConnect();
-
-    // SQL準備
-    $stmt = $dbh->prepare('SELECT * FROM posts WHERE id = :id');
-    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-    // SQL実行
-    $stmt->execute();
-    // 結果を取得
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    return $result;
-}
-
-// リストを新規作成する
-function createPost($posts) {
-    $sql = 'INSERT INTO
-                posts(title, content, created_at ,updated_at)
-            VALUES
-                (:title, :content, :created_at, :updated_at)';
-
-    $dbh = dbConnect();
-    $dbh->beginTransaction();
-    try {
-        $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':title',$posts['todo_title'], PDO::PARAM_STR);
-        $stmt->bindValue(':content',$posts['contents'], PDO::PARAM_STR);
-        $stmt->bindValue(':created_at',$posts['time'], PDO::PARAM_STR);
-        $stmt->bindValue(':updated_at',$posts['time'], PDO::PARAM_STR);
-        $stmt->execute();
-        $dbh->commit();
-    } catch (PDOException $e) {
-        $dbh->rollBack();
-        exit($e);
-    }
-}
-
-// リストを更新する
-function postUpdate($posts) {
-    $sql = 'UPDATE posts SET
-                title = :title, content = :content, updated_at = :updated_at
-            WHERE
-                id = :id';
-
-    $dbh = dbConnect();
-    $dbh->beginTransaction();
-    try {
-        $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':title',$posts['todo_title'], PDO::PARAM_STR);
-        $stmt->bindValue(':content',$posts['contents'], PDO::PARAM_STR);
-        $stmt->bindValue(':updated_at',$posts['time'], PDO::PARAM_STR);
-        $stmt->bindValue(':id',$posts['id'], PDO::PARAM_INT);
-        $stmt->execute();
-        $dbh->commit();
-    } catch (PDOException $e) {
-        $dbh->rollBack();
-        exit($e);
-    }
+    return array($placeholderTitle, $placeholderContent, $title, $content, $dealingProcess, $id, $formText);
 }
 
 // バリデーション処理
@@ -117,27 +51,24 @@ function h($s) {
     return htmlspecialchars($s, ENT_QUOTES, "UTF-8");
 }
 
-// レコードを削除する
-function delete($id) {
-    if(empty($id)) {
-        exit('元のページに戻ってください。');
+function checkIdExistence($id) {
+    $idReference = dbGetAllId();
+    foreach ($idReference as $checkId) {
+        if ($checkId['ID'] == $id) {
+            return "match";
+        }
     }
 
-    $dbh = dbConnect();
-
-    // SQL準備
-    $stmt = $dbh->prepare('DELETE FROM posts WHERE id = :id');
-    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-    // SQL実行
-    $stmt->execute();
+    return "mismatch";
 }
 
+
+
 // 画面表示する最大ページ数,現在のページ,表示するページのデータを送る
-function getDisplayInformation($searchData) {
+function getDisplayInformation($list) {
     define('MAX', '5');
 
-    $postsData = $searchData;
-    $dataNumber = count($postsData);
+    $dataNumber = count($list);
     $maxPage = ceil($dataNumber / MAX);
 
     if(!isset($_GET['pageId'])) {
@@ -150,42 +81,58 @@ function getDisplayInformation($searchData) {
     $startNumber = ($now - 1) * MAX;
 
     // 画面に表示させるデータ
-    $displayData = array_slice($postsData, $startNumber, MAX, true);
+    $displayData = array_slice($list, $startNumber, MAX, true);
 
     return array($maxPage, $now, $displayData);
 }
 
 // ページング機能
-function pagingFunction($now, $maxPage) {
+function pagingFunction($now, $maxPage, $search) {
     if($now > 1) {
-        echo '<a href="index.php?pageId='.($now - 1).'")>前へ</a>'.' ';
+        echo '<a href="index.php?pageId='.($now - 1).'&searchTerm='.$search.'">前へ</a>'.' ';
     }
 
     for ($i = 1; $i <= $maxPage; $i++) {
         if ($i == $now) { // 現在表示中のページ数の場合はリンクを貼らない
             echo $now.' '; 
         } else {
-            echo '<a href="index.php?pageId='.$i.'")>'.$i.'</a>'.' ';
+            echo '<a href="index.php?pageId='.$i.'&searchTerm='.$search.'">'.$i.'</a>'.' ';
         }
     }
 
     if($now < $maxPage) {
-        echo '<a href="index.php?pageId='.($now + 1).'")>次へ</a>'.' ';
+        echo '<a href="index.php?pageId='.($now + 1).'&searchTerm='.$search.'">次へ</a>'.' ';
     }
 }
 
-// あいまい検索
-function searchData($search) {
-    $dbh = dbConnect();
+// $backがNullの時ボタン表示
+function backButton($back) {
+    if (!isset($back)) {
+        echo '<form><input type="button" value="戻る" onClick="history.back()"></form>';
+    }
+}
 
-    $stmt = $dbh->prepare("SELECT * FROM posts WHERE title LIKE :search1 OR content LIKE :search2");
-    $stmt->bindValue( ":search1", '%'. addcslashes($search, '\_%'). '%');
-    $stmt->bindValue( ":search2", '%'. addcslashes($search, '\_%'). '%');
-    $stmt->execute();
-    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-   
-    return $result;
-    $dbh = null;
+function confirmConditionalBranch ($nextAction, $posts) {
+    if (!isset($nextAction)) {
+        $message = "以下の内容を登録しますか？";
+        $nextMessage = "登録する";
+        $nextPage = "";
+    } else {
+        $message = "ToDoリストに以下の項目を追加できました！";
+        $nextMessage = "ToDoリストを確認する";
+        $nextPage = "index.php";
+        $back ="noButton";
+        switch ($posts['dealingProcess']) {
+            case "create":
+                dbCreatePost($posts);
+                break;
+            case "edit":
+                dbPostUpdate($posts);
+                break;
+        }
+    }
+
+    return array($message, $nextMessage, $nextPage, $back);
 }
 
 ?>

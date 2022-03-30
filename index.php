@@ -1,26 +1,25 @@
 <?php
 
 require_once('function.php');
+require_once('db-function.php');
 
 // レコードを削除
 $id = (int)$_POST['id'];
-if ($_POST['loading'] == "delete") {
-    delete($id);
+if ($_POST['nextAction'] == "delete") {
+    dbDelete($id);
 }
 
 // あいまい検索の処理
-if (!empty($_POST['search'])) {
-    $search = $_POST['search'];
-    $list = searchData($search);
+if (!empty($_GET['searchTerm'])) {
+    $search = $_GET['searchTerm'];
+    $list = dbSearchData($search);
 } else {
-    $list = getAllData();
+    $list = dbGetAllData();
 }
 
-// 最大ページ数,現在のページの場所,表示するデータ
-$pageData = getDisplayInformation($list);
-$maxPage = $pageData[0];
-$now = $pageData[1];
-$displayData = $pageData[2];
+$maxPage = getDisplayInformation($list)[0]; //最大ページ数
+$now = getDisplayInformation($list)[1]; //現在のページ
+$displayData = getDisplayInformation($list)[2]; //現在のページに表示するデータのまとまり
 
 ?>
 
@@ -38,16 +37,16 @@ $displayData = $pageData[2];
         ToDo List Page
     </h1>
     <div class="searchBox">
-        <form action="" method="post">
+        <form action="" method="get">
             <div style="margin: 10px">
-                <input type="text" name="search" maxlength="255" placeholder="キーワード入力">
+                <input type="text" name="searchTerm" maxlength="255" placeholder="キーワード入力">
             </div>
                 <input type="submit" value="検索">
         </form>
     </div>
     <div class="listPage">
-        <form action="create.php">
-            <button type="submit" style="padding: 10px;font-size: 16px;margin-bottom: 10px">New Todo</button>
+        <form action="edit.php" method="post">
+            <button type="submit" style="padding: 10px;font-size: 16px;margin-bottom: 10px" name="where" value="create">New Todo</button>
         </form>
         <table border="1">
             <colgroup span="4"></colgroup>
@@ -69,12 +68,13 @@ $displayData = $pageData[2];
                 <td><?php echo $column['updated_at'] ?></td>
                 <td>
                     <form action="edit.php" method="post">
-                        <button type="submit" style="padding: 10px;font-size: 16px;" name="id" value="<?php echo $column['ID']; ?>">編集する</button>
+                        <input type="hidden" name="id" value="<?php echo $column['ID']; ?>">
+                        <button type="submit" style="padding: 10px;font-size: 16px;" name="where" value="edit">編集する</button>
                     </form>
                 </td>
                 <td>
                     <form action="" method="post">
-                        <input type="hidden" name="loading" value="delete">
+                        <input type="hidden" name="nextAction" value="delete">
                         <button type="submit" style="padding: 10px;font-size: 16px;" name="id" value="<?php echo $column['ID']; ?>">削除する</button>
                     </form>
                 </td>
@@ -83,7 +83,7 @@ $displayData = $pageData[2];
         </table>
     </div>
     <div class="pageNumbers">
-        <?php pagingFunction($now, $maxPage); // リストの下に表示するページング機能 ?>
+        <?php pagingFunction($now, $maxPage, $search); // リストの下に表示するページング機能 ?>
     </div>
 </body>
 </html>
