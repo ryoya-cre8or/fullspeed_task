@@ -1,12 +1,11 @@
 <?php
 
-require_once('db-function.php');
+require_once('dbc.php');
 
 function boxData($id, $where) {
+    $dbc = new Dbc();
     switch ($where) {
         case "create":
-            $placeholderTitle ="例)掃除";
-            $placeholderContent ="例)トイレと風呂場を掃除する";
             $title = "";
             $content = "";
             $dealingProcess = "create";
@@ -14,10 +13,8 @@ function boxData($id, $where) {
             $formText = "投稿する";
             break;
         case "edit":
-            if (checkIdExistence($id) == "match") {
-                $result = dbGetData($id);
-                $placeholderTitle ="";
-                $placeholderContent ="";
+            if ($dbc->dbCheckId($id)) {
+                $result = $dbc->dbGetData($id);
                 $title = $result['title'];
                 $content = $result['content'];
                 $dealingProcess = "edit";
@@ -28,7 +25,7 @@ function boxData($id, $where) {
             break;
     }
 
-    return array($placeholderTitle, $placeholderContent, $title, $content, $dealingProcess, $id, $formText);
+    return array($title, $content, $dealingProcess, $id, $formText);
 }
 
 // バリデーション処理
@@ -50,19 +47,6 @@ function postValidate($posts) {
 function h($s) {
     return htmlspecialchars($s, ENT_QUOTES, "UTF-8");
 }
-
-function checkIdExistence($id) {
-    $idReference = dbGetAllId();
-    foreach ($idReference as $checkId) {
-        if ($checkId['ID'] == $id) {
-            return "match";
-        }
-    }
-
-    return "mismatch";
-}
-
-
 
 // 画面表示する最大ページ数,現在のページ,表示するページのデータを送る
 function getDisplayInformation($list) {
@@ -113,6 +97,7 @@ function backButton($back) {
 }
 
 function confirmConditionalBranch ($nextAction, $posts) {
+    $dbc = new Dbc();
     if (!isset($nextAction)) {
         $message = "以下の内容を登録しますか？";
         $nextMessage = "登録する";
@@ -124,10 +109,10 @@ function confirmConditionalBranch ($nextAction, $posts) {
         $back ="noButton";
         switch ($posts['dealingProcess']) {
             case "create":
-                dbCreatePost($posts);
+                $dbc->dbCreatePost($posts);
                 break;
             case "edit":
-                dbPostUpdate($posts);
+                $dbc->dbPostUpdate($posts);
                 break;
         }
     }
