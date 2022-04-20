@@ -1,20 +1,22 @@
 <?php
 
 require_once('function.php');
-require_once('db-function.php');
+require_once('dbc.php');
+
+$dbc = new Dbc();
 
 // レコードを削除
 $id = (int)$_POST['id'];
 if ($_POST['nextAction'] == "delete") {
-    dbDelete($id);
+    $dbc->dbDelete($id);
 }
 
 // あいまい検索の処理
 if (!empty($_GET['searchTerm'])) {
     $search = $_GET['searchTerm'];
-    $list = dbSearchData($search);
+    $list = $dbc->dbSearchData($search);
 } else {
-    $list = dbGetAllData();
+    $list = $dbc->dbGetAllData();
 }
 
 $maxPage = getDisplayInformation($list)[0]; //最大ページ数

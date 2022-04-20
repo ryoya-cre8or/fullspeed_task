@@ -1,6 +1,7 @@
 <?php
 
 require_once('function.php');
+require_once('dbc.php');
 
 // データベース接続
 function dbConnect() {
@@ -102,11 +103,12 @@ function dbPostUpdate($posts) {
 
 // レコードを削除する
 function dbDelete($id) {
+    $dbc = new Dbc();
     if(empty($id)) {
         exit('元のページに戻ってください。');
     }
 
-    if (checkIdExistence($id) == "match") {
+    if ($dbc->dbCheckId($id)) {
         $dbh = dbConnect();
 
         // SQL準備
