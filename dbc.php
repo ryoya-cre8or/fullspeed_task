@@ -3,7 +3,13 @@ ini_set('display_errors', "On");
 
 Class Dbc {
 
-    public static function dbConnect() {
+    protected $table_name;
+
+    function __construct(String $table_name){
+        $this->table_name = $table_name;        
+    }
+
+    public function dbConnect() {
         $dsn = 'mysql:host=localhost;dbname=todo_app;charset=utf8';
         $user = 'post_user';
         $pass = 'post_user';
@@ -22,10 +28,10 @@ Class Dbc {
     }
     
     // データを取得する
-    function dbGetAllData() {
+    public function dbGetAllData() {
         $dbh = $this->dbConnect();
         // SQLの準備
-        $sql = 'SELECT * FROM posts';
+        $sql = "SELECT * FROM $this->table_name";
         // SQLの実行
         $stmt = $dbh->query($sql);
         // 結果を取得
@@ -44,7 +50,7 @@ Class Dbc {
         $dbh = $this->dbConnect();
     
         // SQL準備
-        $stmt = $dbh->prepare('SELECT * FROM posts WHERE id = :id');
+        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         // SQL実行
         $stmt->execute();
@@ -52,14 +58,15 @@ Class Dbc {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
         return $result;
+        $dbh = null;
     }
     
     // リストを新規作成する
-    function dbCreatePost($posts) {
-        $sql = 'INSERT INTO
-                    posts(title, content, created_at ,updated_at)
+    public function dbCreatePost($posts) {
+        $sql = "INSERT INTO
+                    $this->table_name(title, content, created_at ,updated_at)
                 VALUES
-                    (:title, :content, :created_at, :updated_at)';
+                    (:title, :content, :created_at, :updated_at)";
     
         $dbh = $this->dbConnect();
         $dbh->beginTransaction();
@@ -75,14 +82,15 @@ Class Dbc {
             $dbh->rollBack();
             exit($e);
         }
+        $dbh = null;
     }
     
     // リストを更新する
-    function dbPostUpdate($posts) {
-        $sql = 'UPDATE posts SET
+    public function dbPostUpdate($posts) {
+        $sql = "UPDATE $this->table_name SET
                     title = :title, content = :content, updated_at = :updated_at
                 WHERE
-                    id = :id';
+                    id = :id";
     
         $dbh = $this->dbConnect();
         $dbh->beginTransaction();
@@ -98,6 +106,7 @@ Class Dbc {
             $dbh->rollBack();
             exit($e);
         }
+        $dbh = null;
     }
     
     // レコードを削除する
@@ -110,33 +119,21 @@ Class Dbc {
             $dbh = $this->dbConnect();
     
             // SQL準備
-            $stmt = $dbh->prepare('DELETE FROM posts WHERE id = :id');
+            $stmt = $dbh->prepare("DELETE FROM $this->table_name WHERE id = :id");
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
             // SQL実行
             $stmt->execute();
         } else {
             exit('存在しないIDです');
-        }    
+        }
+        $dbh = null;
     }
     
-    function dbGetAllId() {
+    public function dbCheckId($id) {
         $dbh = $this->dbConnect();
     
         // SQL準備
-        $stmt = $dbh->prepare('SELECT ID FROM posts');
-        // SQL実行
-        $stmt->execute();
-        // 結果を取得
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-        return $result;
-    }
-
-    function dbCheckId($id) {
-        $dbh = $this->dbConnect();
-    
-        // SQL準備
-        $stmt = $dbh->prepare('SELECT * FROM posts WHERE id = :id LIMIT 1');
+        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE id = :id LIMIT 1");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         // SQL実行
         $stmt->execute();
@@ -144,13 +141,14 @@ Class Dbc {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
         return $result;
+        $dbh = null;
     }
     
     // あいまい検索
-    function dbSearchData($search) {
+    public function dbSearchData($search) {
         $dbh = $this->dbConnect();
     
-        $stmt = $dbh->prepare("SELECT * FROM posts WHERE title LIKE :search1 OR content LIKE :search2");
+        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE title LIKE :search1 OR content LIKE :search2");
         $stmt->bindValue( ":search1", '%'. addcslashes($search, '\_%'). '%');
         $stmt->bindValue( ":search2", '%'. addcslashes($search, '\_%'). '%');
         $stmt->execute();

@@ -3,7 +3,7 @@
 require_once('dbc.php');
 
 function boxData($id, $where) {
-    $dbc = new Dbc();
+    $dbc = new Dbc('posts');
     switch ($where) {
         case "create":
             $title = "";
@@ -97,7 +97,7 @@ function backButton($back) {
 }
 
 function confirmConditionalBranch ($nextAction, $posts) {
-    $dbc = new Dbc();
+    $dbc = new Dbc('posts');
     if (!isset($nextAction)) {
         $message = "以下の内容を登録しますか？";
         $nextMessage = "登録する";

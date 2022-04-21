@@ -3,7 +3,7 @@
 require_once('function.php');
 require_once('dbc.php');
 
-$dbc = new Dbc();
+$dbc = new Dbc('posts');
 
 // レコードを削除
 $id = (int)$_POST['id'];
