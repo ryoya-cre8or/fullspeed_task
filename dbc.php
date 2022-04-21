@@ -159,8 +159,6 @@ Class Dbc {
         $dbh = null;
     }
 
-
-
 }
 
 ?>
