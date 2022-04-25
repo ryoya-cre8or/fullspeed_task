@@ -2,29 +2,28 @@
 ini_set('display_errors', "On");
 
 Class Dbc {
+    private String $dsn;
+    private String $user;
+    private String $pass;
+    protected String $table_name;
 
-    protected $table_name;
-
-    function __construct(String $table_name){
+    function __construct(String $dsn, String $user, String $pass, String $table_name){
+        $this->dsn = $dsn;
+        $this->user = $user;
+        $this->pass = $pass;
         $this->table_name = $table_name;        
     }
 
     public function dbConnect() {
-        $dsn = 'mysql:host=localhost;dbname=todo_app;charset=utf8';
-        $user = 'post_user';
-        $pass = 'post_user';
-        
         try {
-            $dbh = new PDO($dsn,$user,$pass,[
+            $dbh = new PDO($this->dsn,$this->user,$this->pass,[
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
         } catch(PDOException $e) {
             echo '接続失敗'. $e->getMessage();
             exit();
-
         };
-    
         return $dbh;
     }
     
@@ -37,7 +36,6 @@ Class Dbc {
         $stmt = $dbh->query($sql);
         // 結果を取得
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
         return $result;
         $dbh = null;
     }
@@ -57,7 +55,31 @@ Class Dbc {
         $stmt->execute();
         // 結果を取得
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result;
+        $dbh = null;
+    }
+
+    public function dbCheckId($id) {
+        $dbh = $this->dbConnect();
+        // SQL準備
+        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE id = :id LIMIT 1");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        // SQL実行
+        $stmt->execute();
+        // 結果を取得
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result;
+        $dbh = null;
+    }
     
+    // あいまい検索
+    public function dbSearchData($search) {
+        $dbh = $this->dbConnect();
+        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE title LIKE :search1 OR content LIKE :search2");
+        $stmt->bindValue( ":search1", '%'. addcslashes($search, '\_%'). '%');
+        $stmt->bindValue( ":search2", '%'. addcslashes($search, '\_%'). '%');
+        $stmt->execute();
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $result;
         $dbh = null;
     }
@@ -68,7 +90,6 @@ Class Dbc {
                     $this->table_name(title, content, created_at ,updated_at)
                 VALUES
                     (:title, :content, :created_at, :updated_at)";
-    
         $dbh = $this->dbConnect();
         $dbh->beginTransaction();
         try {
@@ -92,7 +113,6 @@ Class Dbc {
                     title = :title, content = :content, updated_at = :updated_at
                 WHERE
                     id = :id";
-    
         $dbh = $this->dbConnect();
         $dbh->beginTransaction();
         try {
@@ -118,7 +138,6 @@ Class Dbc {
     
         if ($this->dbCheckId($id)) {
             $dbh = $this->dbConnect();
-    
             // SQL準備
             $stmt = $dbh->prepare("DELETE FROM $this->table_name WHERE id = :id");
             $stmt->bindValue(':id', $id, PDO::PARAM_INT);
@@ -127,35 +146,6 @@ Class Dbc {
         } else {
             exit('存在しないIDです');
         }
-        $dbh = null;
-    }
-    
-    public function dbCheckId($id) {
-        $dbh = $this->dbConnect();
-    
-        // SQL準備
-        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE id = :id LIMIT 1");
-        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
-        // SQL実行
-        $stmt->execute();
-        // 結果を取得
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-        return $result;
-        $dbh = null;
-    }
-    
-    // あいまい検索
-    public function dbSearchData($search) {
-        $dbh = $this->dbConnect();
-    
-        $stmt = $dbh->prepare("SELECT * FROM $this->table_name WHERE title LIKE :search1 OR content LIKE :search2");
-        $stmt->bindValue( ":search1", '%'. addcslashes($search, '\_%'). '%');
-        $stmt->bindValue( ":search2", '%'. addcslashes($search, '\_%'). '%');
-        $stmt->execute();
-        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-       
-        return $result;
         $dbh = null;
     }
 
