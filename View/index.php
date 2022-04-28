@@ -1,9 +1,11 @@
 <?php
 
-require_once('function.php');
-require_once('dbc.php');
+require_once('../Controller/function.php');
+require_once('../Controller/PagingClass.php');
+require_once('../Controller/DisplayDataClass.php');
+require_once('../Model/DbcClass.php');
 
-$dbc = new Dbc();
+$dbc = new DbcClass('mysql:host=localhost;dbname=todo_app;charset=utf8', 'post_user', 'post_user', 'posts');
 
 // レコードを削除
 $id = (int)$_POST['id'];
@@ -13,27 +15,21 @@ if ($_POST['nextAction'] == "delete") {
 
 // あいまい検索の処理
 if (!empty($_GET['searchTerm'])) {
-    $search = $_GET['searchTerm'];
-    $list = $dbc->dbSearchData($search);
+    $list = $dbc->dbSearchData($_GET['searchTerm']);
 } else {
     $list = $dbc->dbGetAllData();
 }
 
-$maxPage = getDisplayInformation($list)[0]; //最大ページ数
-$now = getDisplayInformation($list)[1]; //現在のページ
-$displayData = getDisplayInformation($list)[2]; //現在のページに表示するデータのまとまり
+$displayData = new DisplayData($list);
+$paging = new Paging($displayData->getDisplayData()["now"], $displayData->getDisplayData()["maxPage"], $_GET['searchTerm']);
 
 ?>
 
-<!doctype html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Index Page</title>
-</head>
+<?php
+$pageTitle = "Index Page";
+require_once('head.php');
+?>
+
 <body>
     <h1>
         ToDo List Page
@@ -61,7 +57,7 @@ $displayData = getDisplayInformation($list)[2]; //現在のページに表示す
                 <th>編集</th>
                 <th>削除</th>
             </tr>
-            <?php foreach($displayData as $column): ?>
+            <?php foreach($displayData->getDisplayData()["displayData"] as $column): ?>
             <tr>
                 <td><?php echo $column['ID'] ?></td>
                 <td><?php echo h($column['title']) // XSSのエスケープ処理 ?></td>
@@ -85,7 +81,7 @@ $displayData = getDisplayInformation($list)[2]; //現在のページに表示す
         </table>
     </div>
     <div class="pageNumbers">
-        <?php pagingFunction($now, $maxPage, $search); // リストの下に表示するページング機能 ?>
+        <?php echo $paging->getPagingCode(); // リストの下に表示するページング機能 ?>
     </div>
 </body>
 </html>
